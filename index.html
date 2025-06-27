@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Check Location to Show QR</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 30px; }
+    #qrcode { margin-top: 20px; display: none; }
+    #status { font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h2>🛰️ ពិនិត្យទីតាំង មុនបង្ហាញ QR</h2>
+  <div id="status">កំពុងពិនិត្យទីតាំង...</div>
+  <canvas id="qrcode"></canvas>
+
+  <script>
+    const allowedLat = 10.8409855, allowedLng = 104.4614037;
+    const maxDistM = 100;
+    const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScouLsYZ6mK1kAXZ5t8nZJ7vl7bmJBUZ9yK7Uf2ayjmNlgmfA/viewform?usp=dialog";
+
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const toRad = x => x * Math.PI / 180;
+      const R = 6371e3;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng/2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    navigator.geolocation.getCurrentPosition(pos => {
+      const userLat = pos.coords.latitude;
+      const userLng = pos.coords.longitude;
+      const dist = getDistance(userLat, userLng, allowedLat, allowedLng);
+      const status = document.getElementById("status");
+      if (dist <= maxDistM) {
+        status.textContent = `✅ ស្ថិតក្នុង ${Math.round(dist)} m → បង្ហាញ QR...`;
+        const qr = document.getElementById("qrcode");
+        qr.style.display = "block";
+        QRCode.toCanvas(qr, formUrl, { width: 250 }, error => {
+          if (error) status.textContent = "បញ្ហាក្នុងការបង្កើត QR";
+        });
+      } else {
+        status.textContent = `❌ អ្នកស្ថិតនៅក្រៅចំងាយ (${Math.round(dist)} m)។ មិនអាចបង្ហាញ QR បានទេ។`;
+      }
+    }, err => {
+      document.getElementById("status").textContent = "⚠️ មិនអាចប្រើ GPS: " + err.message;
+    }, { enableHighAccuracy: true });
+  </script>
+</body>
+</html>
